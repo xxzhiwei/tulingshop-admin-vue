@@ -171,7 +171,7 @@
                         </el-form-item>
                         <el-form-item>
                             <el-button type="primary" @click="previous()">上一步</el-button>
-                            <el-button type="primary" @click="save">保存</el-button>
+                            <el-button type="primary" @click="saveOrUpdate">保存</el-button>
                         </el-form-item>
                     </el-form>
                 </el-col>
@@ -194,7 +194,8 @@ import { getList as getBrandList } from "@/api/pms/brand";
 import { getList as getCategoryList } from "@/api/pms/category";
 import { getList as getAttrGroupList } from "@/api/pms/productAttrGroup";
 import { getList as getAttrList } from "@/api/pms/productAttr";
-import { save } from "@/api/pms/product";
+import { save, getDetail, update } from "@/api/pms/product";
+import { copyProperties } from "@/utils/common";
 
 const BASE = 'base';
 const ATTR = 'attr';
@@ -214,26 +215,33 @@ const steps = {
 
 const stepCount = Object.keys(steps).length;
 
+const defaultFormData = {
+    name: '',
+    description: '',
+    brandId: '',
+    giftGrowth: '',
+    giftPoint: '',
+    productCategoryId: '',
+    attrGroups: [], // 接口不需要
+    attrs: [],
+    saleAttrs: [], // 接口不需要
+    recommendStatus: 1,
+    newStatus: 1,
+    publishStatus: 1,
+    skus: [],
+    abc: "",
+    categoryIds: "",
+    unit: "",
+    weight: "",
+    price: "",
+    subTitle: ""
+}
+
 export default {
     data() {
         return {
             active: 1,
-            formData: {
-                name: '',
-                description: '',
-                brandId: '',
-                giftGrowth: '',
-                giftPoint: '',
-                productCategoryId: '',
-                attrGroups: [], // 接口不需要
-                attrs: [],
-                saleAttrs: [], // 接口不需要
-                recommendStatus: 1,
-                newStatus: 1,
-                publishStatus: 1,
-                skus: [],
-                abc: ""
-            },
+            formData: copyProperties({}, defaultFormData),
             brandList: [],
             categoryList: [],
             categoryProps: {
@@ -246,9 +254,18 @@ export default {
             steps,
             attrGroupList: [],
             saleAttrList: [],
+            skuSaleAttrList: null,
+            isEditing: false
         }
     },
     created() {
+        // 查看&编辑
+        const { id } = this.$route.params;
+        if (id) {
+            this.isEditing = true;
+            this.getDetail(id);
+        }
+
         this.getBrandList();
         this.getCategoryList();
     },
@@ -291,7 +308,10 @@ export default {
                         await this.getSaleAttrList();
                         break;
                     case SALE_ATTR:
-                        this.makeSkuList();
+                        // 非查看编辑时，才需要生成sku
+                        if (!this.isEditing) {
+                            this.makeSkuList();
+                        }
                         break;
                 }
 
@@ -322,19 +342,34 @@ export default {
             if (resp.code !== 0) {
                 return this.$message.error("获取规格属性分组列表失败");
             }
+
+            this.attrGroupList = resp.data;
+
             const _attrGroupList = [];
             for (const item of resp.data) {
-                const _attrs = []; // 每个分组的属性集合
-                for (const attrItem of item.attrs) {
-                    _attrs.push({
-                        id: attrItem.id,
-                        name: attrItem.name,
-                        value: attrItem.type === 2 ? [] : ''
-                     });
+                let _attrs;
+                // 若为查看编辑状态，则从服务器返回的数据中查找
+                if (this.isEditing) {
+                    _attrs = this.formData.attrs.filter(attrItem => attrItem.groupId === item.id).map(attrItem => {
+                        if (attrItem.type === 2) {
+                            attrItem.value = attrItem.vaue.join(",");
+                        }
+                        return attrItem;
+                    });
+                }
+                else {
+                    _attrs = []; // 每个分组的属性集合
+                    for (const attrItem of item.attrs) {
+                        _attrs.push({
+                            id: attrItem.id,
+                            name: attrItem.name,
+                            value: attrItem.type === 2 ? [] : ''
+                        });
+                    }
                 }
                 _attrGroupList.push(_attrs);
             }
-            this.attrGroupList = resp.data;
+
             this.formData.attrGroups = _attrGroupList;
         },
         // 获取销售属性
@@ -349,7 +384,7 @@ export default {
                 _attrs.push({
                     id: item.id,
                     name: item.name,
-                    value: [],
+                    value: this.isEditing ? this.getSaleAttrValuesByAttrId(item.id) : [], // 若为查看编辑，则从sku列表中查询value
                     customValue: "",
                     inputVisible: false
                 });
@@ -359,6 +394,7 @@ export default {
         },
         handleCascaderChange(value) {
             if (value && value.length) {
+                this.formData.categoryIds = value.join(",");
                 this.formData.productCategoryId = value[value.length - 1];
             }
         },
@@ -464,16 +500,13 @@ export default {
                 }
             }
         },
-        // 保存商品
-        save() {
+        // 保存或更新商品
+        saveOrUpdate() {
             this.$confirm("即将提交商品数据，是否继续?", "提示", {
                 confirmButtonText: "确定",
                 cancelButtonText: "取消",
                 type: "warning"
             }).then(async () => {
-                console.log(this.formData);
-
-
                 const { attrGroups, saleAttrs, ...others } = this.formData;
 
                 // 消去外层分组
@@ -485,7 +518,9 @@ export default {
                     }
                 }
                 others.attrs = attrs;
-                const resp = await save(others);
+                const resp = this.isEditing 
+                    ? await update(others) 
+                    : await save(others);
 
                 if (resp.code !== 0) {
                     return this.$message.error("保存失败：" + resp.message);
@@ -495,6 +530,28 @@ export default {
             }).catch((error) => {
                 console.log(error);
             });
+        },
+        // 获取详情
+        async getDetail(id) {
+            const resp = await getDetail(id);
+            if (resp.code !== 0) {
+                return this.$message.error("获取详情失败：" + resp.message);
+            }
+            this.formData = copyProperties(resp.data, this.formData);
+            this.categoryIds = this.formData.categoryIds.split(",").map(item => +item);
+        },
+        // 在sku列表中查询销售属性值
+        getSaleAttrValuesByAttrId(id) {
+
+            if (this.skuSaleAttrList === null) {
+                let skuSaleAttrs = [];
+                for (const item of this.formData.skus) {
+                    skuSaleAttrs.push(...item.attrs);
+                }
+                this.skuSaleAttrList = skuSaleAttrs;
+            }
+
+            return [...new Set(this.skuSaleAttrList.filter(item => item.id === id).map(item => item.value))];
         }
     }
 }

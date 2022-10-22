@@ -49,30 +49,29 @@ async function respHandler(resp) {
                 }, 2000);
                 return;
             }
+
             // 先等待刷新token的结果【一般来说，网络良好的情况下，不会花多久；可根据自己的实际情况来设置等待时间】
             while (refreshing && times < 5 && !accessToken) {
                 times++;
-                await timeout(0.1);
+                await timeout(0.1 * times);
                 accessToken = store.state.user.accessToken;
                 if (accessToken) {
                     break;
                 }
             }
 
+            // 等待次数完毕，且无accessToken时，则不再重新发起请求
             if (times !== 0) {
                 times = 0;
+                if (!accessToken) {
+                    return;
+                } 
             }
-
-            // 等待次数完毕，且无accessToken时，则不再重新发起请求
-            if (!accessToken) {
-                return;
-            }
-
-            // 若请求头与store中的token一致，则进行刷新
-            if (resp.config.headers["Authorization"].split(" ")[1] === accessToken) {
+            
+            // 若token为空或者请求头与store中的token一致，则进行刷新
+            if (!accessToken || resp.config.headers["Authorization"].split(" ")[1] === accessToken) {
                 refreshing = true;
                 store.commit("user/SET_ACCESS_TOKEN", { accessToken: "" });
-                
                 const refreshResp = await refresh({ refreshToken }).catch(error => {
                     console.log("刷新失败：");
                     console.log(error);

@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 
-// 获取产品分页
+// 获取分页
 export function getPagination(query) {
     return request({
         url: '/product/pagination',
@@ -14,5 +14,21 @@ export function save(params) {
         url: '/product/save',
         method: 'post',
         data: params
+    });
+}
+
+export function update(params) {
+    return request({
+        url: '/product/update',
+        method: 'post',
+        data: params
+    });
+}
+
+// 获取详情
+export function getDetail(id) {
+    return request({
+        url: `/product/detail/${id}`,
+        method: 'get'
     });
 }

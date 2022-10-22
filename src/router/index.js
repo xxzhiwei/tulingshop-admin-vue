@@ -56,6 +56,9 @@ export const constantRoutes = [
 
 export const NOT_FOUND = { path: '*', redirect: '/404', hidden: true };
 
+// 动态调用（非函数），返回一个已resolve的Promise
+const productAddOrEdit = import('@/views/pms/product/add-or-edit');
+
 export const asyncRoutes = [
     {
         path: '/pms',
@@ -76,9 +79,18 @@ export const asyncRoutes = [
             },
             {
                 path: 'product/add-or-edit',
-                component: () => import('@/views/pms/product/add-or-edit'),
+                component: () => productAddOrEdit,
                 meta: {
-                    title: '添加&编辑商品',
+                    title: '添加',
+                    activeMenu: '/pms/product'
+                },
+                hidden: true,
+            },
+            {
+                path: 'product/add-or-edit/:id',
+                component: () => productAddOrEdit,
+                meta: {
+                    title: '编辑商品',
                     activeMenu: '/pms/product'
                 },
                 hidden: true,
