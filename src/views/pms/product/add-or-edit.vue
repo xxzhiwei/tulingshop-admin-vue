@@ -361,7 +361,7 @@ export default {
                     _attrs = []; // 每个分组的属性集合
                     for (const attrItem of item.attrs) {
                         _attrs.push({
-                            id: attrItem.id,
+                            attrId: attrItem.id,
                             name: attrItem.name,
                             value: attrItem.type === 2 ? [] : ''
                         });
@@ -382,7 +382,7 @@ export default {
             const _attrs = []; // 每个分组的属性集合
             for (const item of resp.data) {
                 _attrs.push({
-                    id: item.id,
+                    attrId: item.id,
                     name: item.name,
                     value: this.isEditing ? this.getSaleAttrValuesByAttrId(item.id) : [], // 若为查看编辑，则从sku列表中查询value
                     customValue: "",
@@ -403,24 +403,24 @@ export default {
             this.formData.saleAttrs[index].inputVisible = true;
             // 需要'错位才能生效'
             this.$nextTick(() => {
-                this.$refs[this.formRefNames[2] + '-input-' + index][0].focus();
+                this.$refs[this.SALE_ATTR + '-input-' + index][0].focus();
             });
         },
         hideInput(index) {
             this.formData.saleAttrs[index].inputVisible = false;
         },
-        // 若自定义输入框不为空时，将其内容获取，并赋予【this.saleAttrs[index].valueSelect】作为选项
+        // 若自定义输入框不为空时，将其内容获取，并赋予【this.saleAttrs[index].value】作为选项
         customHandler(index) {
             const customValue = this.formData.saleAttrs[index].customValue;
             if (customValue) {
-                const valueSelect = this.saleAttrList[index].valueSelect;
-                if (valueSelect !== "") {
-                    this.saleAttrList[index].valueSelect = valueSelect + "," + customValue;
+                const value = this.saleAttrList[index].value;
+                if (value !== "") {
+                    this.saleAttrList[index].value = value + "," + customValue;
                 }
                 else {
-                    this.saleAttrList[index].valueSelect = customValue;
+                    this.saleAttrList[index].value = customValue;
                 }
-                this.attrDataForm.saleAttrs[index].customValue = "";
+                this.formData.saleAttrs[index].customValue = "";
             }
 
             this.hideInput(index);
@@ -440,7 +440,7 @@ export default {
                     // 如：'土豪金'，对应this.formData.saleAttrs[0]，也就是'颜色'这个销售属性
                     const saleAttr = this.formData.saleAttrs[i];
                     attrs.push({
-                        id: saleAttr.id,
+                        attrId: saleAttr.id,
                         name: saleAttr.name,
                         value: item[i]
                     });
@@ -551,7 +551,7 @@ export default {
                 this.skuSaleAttrList = skuSaleAttrs;
             }
 
-            return [...new Set(this.skuSaleAttrList.filter(item => item.id === id).map(item => item.value))];
+            return [...new Set(this.skuSaleAttrList.filter(item => item.attrId === id).map(item => item.value))];
         }
     }
 }
