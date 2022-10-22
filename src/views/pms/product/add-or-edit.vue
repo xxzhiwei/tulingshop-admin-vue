@@ -4,29 +4,25 @@
             <el-row>
                 <el-col style="margin-bottom: 40px;">
                     <el-steps :active="active" align-center>
-                        <el-step title="基本信息"></el-step>
-                        <el-step title="规格参数"></el-step>
-                        <el-step title="销售属性"></el-step>
-                        <el-step title="SKU信息"></el-step>
-                        <el-step title="完成"></el-step>
+                        <el-step v-for="(value, key) in steps" :key="key" :title="value"></el-step>
                     </el-steps>
                 </el-col>
                 <!-- step1：基本信息 -->
                 <el-col v-if="active === 1" :span="18">
-                    <el-form :model="formData" :ref="formRefNames[0]" label-width="auto" size="mini">
-                        <el-form-item label="选择分类" prop="categoryId" required>
+                    <el-form :model="formData" :ref="BASE" label-width="auto" size="mini">
+                        <el-form-item label="选择分类" prop="productCategoryId" required>
                             <el-cascader
                                 v-model="categoryIds"
                                 :options="categoryList"
                                 @change="handleCascaderChange" :props="categoryProps"></el-cascader>
                         </el-form-item>
-                        <el-form-item label="商品名称" prop="name">
+                        <el-form-item label="商品名称" prop="name" required>
                             <el-input v-model="formData.name"></el-input>
                         </el-form-item>
                         <el-form-item label="副标题" prop="subTitle">
                             <el-input v-model="formData.subTitle"></el-input>
                         </el-form-item>
-                        <el-form-item label="选择品牌" prop="brandId">
+                        <el-form-item label="选择品牌" prop="brandId" required>
                             <el-select v-model="formData.brandId" placeholder="请选择" clearable>
                                 <el-option v-for="item in brandList" :key="item.id" :label="item.name" :value="item.id">
                                 </el-option>
@@ -44,23 +40,22 @@
                             <el-input v-model="formData.unit"></el-input>
                         </el-form-item>
                         <el-form-item label="商品重量" prop="weight">
-                            <!-- <el-input-number v-model.number="formData.weight" :min="0" :precision="3" :step="0.1"></el-input-number> -->
                             <el-input v-model="formData.weight">
                                 <template slot="append">克</template>
                             </el-input>
                         </el-form-item>
                         <el-form-item label="商品图集" prop="images">
-                            <el-input v-model="formData.brandId"></el-input>
+                            <el-input v-model="formData.abc"></el-input>
                         </el-form-item>
                         <el-form-item>
                             <el-button type="primary" @click="previous()">上一步</el-button>
-                            <el-button type="primary" @click="next()">下一步: 设置规格参数</el-button>
+                            <el-button type="primary" @click="next()">下一步</el-button>
                         </el-form-item>
                     </el-form>
                 </el-col>
 
                 <el-col v-if="active === 2" :span="18">
-                    <el-form :model="formData" :ref="formRefNames[1]" label-width="auto" size="mini">
+                    <el-form :model="formData" :ref="ATTR" label-width="auto" size="mini">
                         <template v-for="(item, itemIndex) in attrGroupList">
                             <el-form-item :key="'attrGroup-' + item.id" label-width="0">
                                 <el-alert
@@ -74,32 +69,32 @@
                             </el-form-item>
                             <el-form-item :label="attrItem.name" v-for="(attrItem, attrIndex) in item.attrs" :key="'attr-' + attrItem.id">
                                 <template v-if="attrItem.type === 3">
-                                    <el-input v-model="formData.attrs[itemIndex][attrIndex].value" placeholder="请输入"></el-input>
+                                    <el-input v-model="formData.attrGroups[itemIndex][attrIndex].value" placeholder="请输入"></el-input>
                                 </template>
                                 <template v-else>
-                                    <el-select v-model="formData.attrs[itemIndex][attrIndex].value" :multiple="attrItem.type === 2" filterable allow-create placeholder="请选择">
-                                        <el-option v-for="(attrValuesItem, attrValuesIndex) in attrItem.values.split(',')" :key="attrValuesIndex" :label="attrValuesItem" :value="attrValuesItem"></el-option>
+                                    <el-select v-model="formData.attrGroups[itemIndex][attrIndex].value" :multiple="attrItem.type === 2" filterable allow-create placeholder="请选择">
+                                        <el-option v-for="(attrValueItem, attrValueIndex) in attrItem.value.split(',')" :key="attrValueIndex" :label="attrValueItem" :value="attrValueItem"></el-option>
                                     </el-select>
                                 </template>
                             </el-form-item>
                         </template>
                         <el-form-item>
                             <el-button type="primary" @click="previous()">上一步</el-button>
-                            <el-button type="primary" @click="next()">下一步: 设置销售属性</el-button>
+                            <el-button type="primary" @click="next()">下一步</el-button>
                         </el-form-item>
                     </el-form>
                 </el-col>
 
                 <el-col v-if="active === 3" :span="18">
-                    <el-form :model="formData" :ref="formRefNames[2]" label-width="auto" size="mini">
+                    <el-form :model="formData" :ref="SALE_ATTR" label-width="auto" size="mini">
                         <el-form-item v-for="(item, index) in saleAttrList" :key="'saleAttr-' + item.id" :label="item.name">
                             <el-checkbox-group class="product-add-or-edit-checkbox-group" size="mini" v-model="formData.saleAttrs[index].value">
                                 <el-checkbox
-                                    v-for="(attrValuesItem, attrValuesIndex) in item.values.split(',')" :key="attrValuesIndex" :label="attrValuesItem" :value="attrValuesItem"></el-checkbox>
+                                    v-for="(attrValueItem, attrValueIndex) in item.value.split(',')" :key="attrValueIndex" :label="attrValueItem" :value="attrValueItem"></el-checkbox>
                                 <div style="margin-left: 10px; display: inline;">
                                 <el-button v-show="!formData.saleAttrs[index].inputVisible" size="mini" @click="showInput(index)">+自定义</el-button>
                                 <el-input
-                                    :ref="formRefNames[2] + '-input-' + index"
+                                    :ref="'saleAttr-input-' + index"
                                     v-show="formData.saleAttrs[index].inputVisible"
                                     v-model="formData.saleAttrs[index].customValue"
                                     size="mini"
@@ -111,24 +106,83 @@
                         </el-form-item>
                         <el-form-item>
                             <el-button type="primary" @click="previous()">上一步</el-button>
-                            <el-button type="primary" @click="next()">下一步: 设置SKU信息属性</el-button>
+                            <el-button type="primary" @click="next()">下一步</el-button>
                         </el-form-item>
                     </el-form>
                 </el-col>
 
-                <el-col v-if="active === 4" :span="18">
-                    <el-form :model="formData" :ref="formRefNames[3]" label-width="auto" size="mini">
+                <el-col v-if="active === 4">
+                    <el-form :model="formData" :ref="SKU" label-width="auto" size="mini">
+                        <el-form-item>
+                            <el-table :data="formData.skus" style="width: 100%" size="small" stripe>
+                                <el-table-column label="属性组合">
+                                    <el-table-column v-for="(item, index) in formData.saleAttrs" :label="item.name" :key="item.id">
+                                        <template slot-scope="{ row }">
+                                            <span style="margin-left: 10px">{{ row.attrs[index].value }}</span>
+                                        </template>
+                                    </el-table-column>
+                                </el-table-column>
+                                <el-table-column label="商品名称" min-width="255px">
+                                    <template slot-scope="scope">
+                                        <el-input v-model="scope.row.name"></el-input>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="价格">
+                                    <template slot-scope="scope">
+                                        <el-input v-model="scope.row.price"></el-input>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="库存">
+                                    <template slot-scope="scope">
+                                        <el-input v-model="scope.row.stock"></el-input>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </el-form-item>
                         <el-form-item>
                             <el-button type="primary" @click="previous()">上一步</el-button>
-                            <el-button type="primary" @click="next()">保存</el-button>
+                            <el-button type="primary" @click="next()">下一步</el-button>
                         </el-form-item>
                     </el-form>
                 </el-col>
 
                 <el-col v-if="active === 5" :span="18">
-                    <h1>保存完成</h1>
-                    <el-button size="mini" type="primary" @click="previous()">上一步</el-button>
-                    <el-button size="mini" type="primary">继续添加</el-button>
+                    <el-form :model="formData" :ref="SETTINGS" label-width="auto" size="mini">
+                        <el-form-item label="上架">
+                            <el-switch
+                                v-model="formData.publishStatus"
+                                :active-value="1"
+                                :inactive-value="0">
+                            </el-switch>
+                        </el-form-item>
+                        <el-form-item label="新品">
+                            <el-switch
+                                v-model="formData.newStatus"
+                                :active-value="1"
+                                :inactive-value="0">
+                            </el-switch>
+                        </el-form-item>
+                        <el-form-item label="推荐">
+                            <el-switch
+                                v-model="formData.recommendStatus"
+                                :active-value="1"
+                                :inactive-value="0">
+                            </el-switch>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="previous()">上一步</el-button>
+                            <el-button type="primary" @click="save">保存</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+
+                <el-col v-if="active === 6">
+                    <el-result icon="success" title="保存完成">
+                        <template slot="extra">
+                            <el-button type="primary" size="mini">返回</el-button>
+                            <el-button type="primary" size="mini">继续添加</el-button>
+                        </template>
+                    </el-result>
                 </el-col>
             </el-row>
         </el-card>
@@ -140,6 +194,25 @@ import { getList as getBrandList } from "@/api/pms/brand";
 import { getList as getCategoryList } from "@/api/pms/category";
 import { getList as getAttrGroupList } from "@/api/pms/productAttrGroup";
 import { getList as getAttrList } from "@/api/pms/productAttr";
+import { save } from "@/api/pms/product";
+
+const BASE = 'base';
+const ATTR = 'attr';
+const SALE_ATTR = 'saleAttr';
+const SKU = 'sku';
+const SETTINGS = 'settings';
+const FINISHED = 'finished';
+
+const steps = {
+    [BASE]: '基本信息',
+    [ATTR]: '规格参数',
+    [SALE_ATTR]: '销售属性',
+    [SKU]: 'SKU信息',
+    [SETTINGS]: '商品设置',
+    [FINISHED]: '完成'
+};
+
+const stepCount = Object.keys(steps).length;
 
 export default {
     data() {
@@ -151,10 +224,15 @@ export default {
                 brandId: '',
                 giftGrowth: '',
                 giftPoint: '',
-                categoryId: '',
+                productCategoryId: '',
+                attrGroups: [], // 接口不需要
                 attrs: [],
-                saleAttrs: [],
-                abc: ''
+                saleAttrs: [], // 接口不需要
+                recommendStatus: 1,
+                newStatus: 1,
+                publishStatus: 1,
+                skus: [],
+                abc: ""
             },
             brandList: [],
             categoryList: [],
@@ -162,15 +240,12 @@ export default {
                 value: 'id',
                 label: 'name',
             },
+            BASE, ATTR, SALE_ATTR, SKU, SETTINGS,
             categoryIds: [],
-            formRefNames: [
-                'base',
-                'attr',
-                'saleAttr',
-                'sku'
-            ],
+            formRefNames: [BASE, ATTR, SALE_ATTR, SETTINGS],
+            steps,
             attrGroupList: [],
-            saleAttrList: []
+            saleAttrList: [],
         }
     },
     created() {
@@ -179,6 +254,9 @@ export default {
     },
     computed: {
         currentFormRefName() {
+            if (this.active > this.formRefNames.length - 1) {
+                return "";
+            }
             return this.formRefNames[this.active - 1];
         }
     },
@@ -189,6 +267,9 @@ export default {
             }
         },
         check() {
+            if (!this.currentFormRefName) {
+                return;
+            }
             this.$refs[this.currentFormRefName].validate(valid => {
                 if (valid) {
                     return true;
@@ -198,15 +279,23 @@ export default {
         },
         async next() {
             try {
+                // 检查必填表单
                 this.check();
-                // 若当前是'base'，则表示下个是'attr'，此前必须先调用接口获取规格属性分组
-                if (this.currentFormRefName === this.formRefNames[0]) {
-                    await this.getAttrGroupList();
+                
+                switch (this.currentFormRefName) {
+                    // 若当前是'base'，则表示下个是'attr'，此前必须先调用接口获取规格属性分组
+                    case BASE:
+                        await this.getAttrGroupList();
+                        break;
+                    case ATTR:
+                        await this.getSaleAttrList();
+                        break;
+                    case SALE_ATTR:
+                        this.makeSkuList();
+                        break;
                 }
-                if (this.currentFormRefName === this.formRefNames[1]) {
-                    await this.getSaleAttrList();
-                }
-                if (this.active < 5) {
+
+                if (this.active < stepCount) {
                     this.active++;
                 }
             } catch (e) {
@@ -229,7 +318,7 @@ export default {
         },
         // 获取规格属性分组
         async getAttrGroupList() {
-            const resp = await getAttrGroupList({ categoryId: this.formData.categoryId });
+            const resp = await getAttrGroupList({ categoryId: this.formData.productCategoryId });
             if (resp.code !== 0) {
                 return this.$message.error("获取规格属性分组列表失败");
             }
@@ -246,11 +335,11 @@ export default {
                 _attrGroupList.push(_attrs);
             }
             this.attrGroupList = resp.data;
-            this.formData.attrs = _attrGroupList;
+            this.formData.attrGroups = _attrGroupList;
         },
         // 获取销售属性
         async getSaleAttrList() {
-            const resp = await getAttrList({ categoryId: this.formData.categoryId });
+            const resp = await getAttrList({ categoryId: this.formData.productCategoryId });
             if (resp.code !== 0) {
                 return this.$message.error("获取销售属性列表失败");
             }
@@ -270,7 +359,7 @@ export default {
         },
         handleCascaderChange(value) {
             if (value && value.length) {
-                this.formData.categoryId = value[value.length - 1];
+                this.formData.productCategoryId = value[value.length - 1];
             }
         },
         // 显示输入框【自定义销售属性】
@@ -300,6 +389,113 @@ export default {
 
             this.hideInput(index);
         },
+        // 组装sku数据（用于在'SKU信息'处表单元素）
+        makeSkuList() {
+            const saleAttrValues = this.formData.saleAttrs.map(item => item.value);
+            // 优先颜色属性【后端来做就可以】
+            const cp = this.makeCartesianProduct(saleAttrValues);
+            const skuList = [];
+
+            for (const item of cp) {
+                // 将cp中的每一项重新包装，使之具有'attr'的特性
+                const attrs = []; 
+                for (let i=0; i<item.length; i++) {
+                    // cp中的元素中的每一项（['土豪金', '4G', '64G']），都是与saleAttr中的每一项一一对应的，
+                    // 如：'土豪金'，对应this.formData.saleAttrs[0]，也就是'颜色'这个销售属性
+                    const saleAttr = this.formData.saleAttrs[i];
+                    attrs.push({
+                        id: saleAttr.id,
+                        name: saleAttr.name,
+                        value: item[i]
+                    });
+                }
+
+                skuList.push({
+                    attrs,
+                    name: this.formData.name + " " + item.join(" "),
+                    price: 0,
+                    stock: 0
+                });
+            }
+
+            this.formData.skus = skuList;
+        },
+        /**
+         * 生成销售属性笛卡尔积；如有以下销售属性：
+         * @param saleAttrValues [['土豪金', '玫瑰红'], ['4G', '8G'], ['64G', '128G']]
+         * @return [
+         *      ['土豪金', '4G', '64G'], ['土豪金', '4G', '128G'], ['土豪金', '8G', '64G'], ['土豪金', '8G', '128G'],
+         *      ['玫瑰红', '4G', '64G'], ['玫瑰红', '4G', '128G'], ['玫瑰红', '8G', '64G'], ['玫瑰红', '8G', '128G']
+         * ]
+         */
+        makeCartesianProduct(saleAttrValues) {
+            const map = {};
+            const cp = [];
+            
+            // 创建每组属性的相关映射关系【下标】
+            for (let i=0; i<saleAttrValues.length; i++) {
+                map[i] = { indexPointer: 0, maxIndex: saleAttrValues[i].length - 1 };
+            }
+
+            while (true) {
+                // 此处key为saleAttrValues的下标
+                const group = [];
+                for (let key in map) {
+                    const indexPointer = map[key].indexPointer;
+                    group.push(saleAttrValues[key][indexPointer]);
+                }
+                cp.push(group);
+
+                let index = 0;
+                for (let key in map) {
+                    if (map[key].indexPointer < map[key].maxIndex) {
+                        map[key].indexPointer++;
+                        break;
+                    }
+                    else {
+                        // 若indexPointer增加至maxIndex后，将其重置为0，然后重新进入while循环；
+                        // index累加至【saleAttrValues.length - 1】后，表示已经循环完毕；将数据cp返回
+                        map[key].indexPointer = 0;
+                        if (index === saleAttrValues.length - 1) {
+                            return cp;
+                        }
+                        index++;
+                    }
+                }
+            }
+        },
+        // 保存商品
+        save() {
+            this.$confirm("即将提交商品数据，是否继续?", "提示", {
+                confirmButtonText: "确定",
+                cancelButtonText: "取消",
+                type: "warning"
+            }).then(async () => {
+                console.log(this.formData);
+
+
+                const { attrGroups, saleAttrs, ...others } = this.formData;
+
+                // 消去外层分组
+                const attrs = [];
+
+                for (const item of attrGroups) {
+                    for (const innerItem of item) {
+                        attrs.push(innerItem);
+                    }
+                }
+                others.attrs = attrs;
+                const resp = await save(others);
+
+                if (resp.code !== 0) {
+                    return this.$message.error("保存失败：" + resp.message);
+                }
+
+                this.next();
+            }).catch((error) => {
+                console.log(error);
+            });
+        }
     }
 }
 </script>

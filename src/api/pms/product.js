@@ -8,3 +8,11 @@ export function getPagination(query) {
         params: query
     });
 }
+
+export function save(params) {
+    return request({
+        url: '/product/save',
+        method: 'post',
+        data: params
+    });
+}
