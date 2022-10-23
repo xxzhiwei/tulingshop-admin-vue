@@ -87,7 +87,7 @@
 
                 <el-col v-if="active === 3" :span="18">
                     <el-form :model="formData" :ref="SALE_ATTR" label-width="auto" size="mini">
-                        <el-form-item v-for="(item, index) in saleAttrList" :key="'saleAttr-' + item.id" :label="item.name">
+                        <el-form-item v-for="(item, index) in saleAttrList" :key="'saleAttr-' + item.id" :label="item.name" prop="saleAttrs">
                             <el-checkbox-group class="product-add-or-edit-checkbox-group" size="mini" v-model="formData.saleAttrs[index].value">
                                 <el-checkbox
                                     v-for="(attrValueItem, attrValueIndex) in item.value.split(',')" :key="attrValueIndex" :label="attrValueItem" :value="attrValueItem"></el-checkbox>
@@ -113,7 +113,7 @@
 
                 <el-col v-if="active === 4">
                     <el-form :model="formData" :ref="SKU" label-width="auto" size="mini">
-                        <el-form-item>
+                        <el-form-item label-width="0">
                             <el-table :data="formData.skus" style="width: 100%" size="small" stripe>
                                 <el-table-column label="属性组合">
                                     <el-table-column v-for="(item, index) in formData.saleAttrs" :label="item.name" :key="item.id">
@@ -122,7 +122,7 @@
                                         </template>
                                     </el-table-column>
                                 </el-table-column>
-                                <el-table-column label="商品名称" min-width="255px">
+                                <el-table-column label="sku名称" min-width="255px">
                                     <template slot-scope="scope">
                                         <el-input v-model="scope.row.name"></el-input>
                                     </template>
@@ -139,6 +139,7 @@
                                 </el-table-column>
                             </el-table>
                         </el-form-item>
+                        
                         <el-form-item>
                             <el-button type="primary" @click="previous()">上一步</el-button>
                             <el-button type="primary" @click="next()">下一步</el-button>
@@ -179,8 +180,8 @@
                 <el-col v-if="active === 6">
                     <el-result icon="success" title="保存完成">
                         <template slot="extra">
-                            <el-button type="primary" size="mini">返回</el-button>
-                            <el-button type="primary" size="mini">继续添加</el-button>
+                            <el-button type="primary" size="mini" @click="$router.go(-1)">返回</el-button>
+                            <el-button v-if="!isEditing" type="primary" size="mini">继续添加</el-button>
                         </template>
                     </el-result>
                 </el-col>
@@ -195,7 +196,7 @@ import { getList as getCategoryList } from "@/api/pms/category";
 import { getList as getAttrGroupList } from "@/api/pms/productAttrGroup";
 import { getList as getAttrList } from "@/api/pms/productAttr";
 import { save, getDetail, update } from "@/api/pms/product";
-import { copyProperties } from "@/utils/common";
+import { copyProperties, getDifference } from "@/utils/common";
 
 const BASE = 'base';
 const ATTR = 'attr';
@@ -216,6 +217,7 @@ const steps = {
 const stepCount = Object.keys(steps).length;
 
 const defaultFormData = {
+    id: "",
     name: '',
     description: '',
     brandId: '',
@@ -241,7 +243,7 @@ export default {
     data() {
         return {
             active: 1,
-            formData: copyProperties({}, defaultFormData),
+            formData: JSON.parse(JSON.stringify(defaultFormData)),
             brandList: [],
             categoryList: [],
             categoryProps: {
@@ -255,7 +257,10 @@ export default {
             attrGroupList: [],
             saleAttrList: [],
             skuSaleAttrList: null,
-            isEditing: false
+            isEditing: false,
+            skuValueMap: null,
+            newSkuValueList: null,
+            skusSaved: [] // 从接口获取的原始sku数据
         }
     },
     created() {
@@ -308,10 +313,7 @@ export default {
                         await this.getSaleAttrList();
                         break;
                     case SALE_ATTR:
-                        // 非查看编辑时，才需要生成sku
-                        if (!this.isEditing) {
-                            this.makeSkuList();
-                        }
+                        this.makeSkuList();
                         break;
                 }
 
@@ -431,29 +433,44 @@ export default {
             // 优先颜色属性【后端来做就可以】
             const cp = this.makeCartesianProduct(saleAttrValues);
             const skuList = [];
-
+            const newSkuValueList = [];
             for (const item of cp) {
-                // 将cp中的每一项重新包装，使之具有'attr'的特性
-                const attrs = []; 
-                for (let i=0; i<item.length; i++) {
-                    // cp中的元素中的每一项（['土豪金', '4G', '64G']），都是与saleAttr中的每一项一一对应的，
-                    // 如：'土豪金'，对应this.formData.saleAttrs[0]，也就是'颜色'这个销售属性
-                    const saleAttr = this.formData.saleAttrs[i];
-                    attrs.push({
-                        attrId: saleAttr.id,
-                        name: saleAttr.name,
-                        value: item[i]
+
+                const values = item.join(',');
+                newSkuValueList.push(values);
+                let skuId = null;
+
+                if (this.isEditing && (skuId = this.skuValueMap[values])) {
+                    // '土豪金', '4G', '64G'根据销售属性值来查找
+                    const sku = this.skusSaved.find(item => item.id === skuId);
+                    if (!sku) {
+                        throw new Error("查找不到sku: " + skuId);
+                    }
+                    skuList.push(sku);
+                }
+                else {
+                    // 将cp中的每一项重新包装，使之具有'attr'的特性
+                    const attrs = []; 
+                    for (let i=0; i<item.length; i++) {
+                        // cp中的元素中的每一项（['土豪金', '4G', '64G']），都是与saleAttr中的每一项一一对应的，
+                        // 如：'土豪金'，对应this.formData.saleAttrs[0]，也就是'颜色'这个销售属性
+                        const saleAttr = this.formData.saleAttrs[i];
+                        attrs.push({
+                            attrId: saleAttr.attrId,
+                            name: saleAttr.name,
+                            value: item[i]
+                        });
+                    }
+                    skuList.push({
+                        attrs,
+                        name: this.formData.name + " " + item.join(" "),
+                        price: 0,
+                        stock: 0
                     });
                 }
-
-                skuList.push({
-                    attrs,
-                    name: this.formData.name + " " + item.join(" "),
-                    price: 0,
-                    stock: 0
-                });
             }
 
+            this.newSkuValueList = newSkuValueList;
             this.formData.skus = skuList;
         },
         /**
@@ -500,7 +517,7 @@ export default {
                 }
             }
         },
-        // 保存或更新商品
+        // 保存或更新商品【销售属性处，是否需要加必填校验？（每项至少选一个）】
         saveOrUpdate() {
             this.$confirm("即将提交商品数据，是否继续?", "提示", {
                 confirmButtonText: "确定",
@@ -518,10 +535,15 @@ export default {
                     }
                 }
                 others.attrs = attrs;
-                const resp = this.isEditing 
-                    ? await update(others) 
-                    : await save(others);
 
+                let resp;
+                // 若为编辑时，获取将要删除的skuId
+                if (this.isEditing) {
+                    resp = await update(others)
+                }
+                else {
+                    resp = await save(others)
+                }
                 if (resp.code !== 0) {
                     return this.$message.error("保存失败：" + resp.message);
                 }
@@ -538,7 +560,16 @@ export default {
                 return this.$message.error("获取详情失败：" + resp.message);
             }
             this.formData = copyProperties(resp.data, this.formData);
+            this.skusSaved = this.formData.skus;
             this.categoryIds = this.formData.categoryIds.split(",").map(item => +item);
+            
+            // 生成sku映射关系
+            const skuValueMap = {};
+            for (const item of this.formData.skus) {
+                const values = item.attrs.map(item => item.value).join(",");
+                skuValueMap[values] = item.id;
+            }
+            this.skuValueMap = skuValueMap;
         },
         // 在sku列表中查询销售属性值
         getSaleAttrValuesByAttrId(id) {
@@ -552,7 +583,16 @@ export default {
             }
 
             return [...new Set(this.skuSaleAttrList.filter(item => item.attrId === id).map(item => item.value))];
-        }
+        },
+        // 【移除即将新增的sku，移除该功能；与生成sku处冲突了；取而代之的应该是，如果没有某个sku，则将其库存设为0？】
+        // remove() {
+        //     const checked = this.$refs.skusToSave.selection;
+        //     if (!checked.length) {
+        //         return this.$message.warning("请选择数据");
+        //     }
+        //     this.formData.skus = this.formData.skus.filter(item => !checked.includes(item));
+        //     this.skusToRemove.push(...checked.filter(item => item.id));
+        // }
     }
 }
 </script>
@@ -564,5 +604,8 @@ export default {
     }
     .product-add-or-edit-checkbox-group.el-checkbox-group .el-checkbox {
         margin-right: 10px;
+    }
+    .product-add-or-edit-el-form-item .el-form-item__label-wrap {
+        margin-left: 0 !important;
     }
 </style>

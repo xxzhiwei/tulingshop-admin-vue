@@ -32,3 +32,21 @@ export function getDetail(id) {
         method: 'get'
     });
 }
+
+// 下架
+export function remove(params) {
+    return request({
+        url: `/product/remove`,
+        method: 'post',
+        data: params
+    });
+}
+
+// 上架
+export function publish(params) {
+    return request({
+        url: `/product/publish`,
+        method: 'post',
+        data: params
+    });
+}

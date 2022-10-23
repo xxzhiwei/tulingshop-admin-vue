@@ -1,4 +1,4 @@
-// 获取俩数字列表的差集
+// 获取俩数字列表的差集【若c1中的元素不存在于c2中，则将其返回】
 export function getDifference(c1, c2) {
     const result = [];
     for (const c1Item of c1) {

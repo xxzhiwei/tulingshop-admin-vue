@@ -38,7 +38,7 @@ export default {
             this.listQuery.size = 10;
         },
         search() {
-            this.getPagination(this.listQuery);
+            this.getPagination();
         },
         handleSizeChange(value) {
             this.listQuery.current = 1;

@@ -27,12 +27,12 @@
                         </el-option>
                     </el-select>
                 </el-form-item>
-                <el-form-item label="审核状态">
+                <!-- <el-form-item label="审核状态">
                     <el-select style="width: 168px;" v-model="listQuery.verifyStatus" placeholder="请选择" clearable>
                         <el-option v-for="item in verifyStatusOptions" :key="item.value" :label="item.label" :value="item.value">
                         </el-option>
                     </el-select>
-                </el-form-item>
+                </el-form-item> -->
                 <el-form-item>
                     <el-button type="primary" @click="search">查询</el-button>
                 </el-form-item>
@@ -45,56 +45,51 @@
         <el-card>
             <div slot="header" class="clearfix">
                 <el-link icon="el-icon-tickets">数据列表</el-link>
-                <el-button style="float: right; padding: 3px 0;" type="text" @click="addOrEdit">
+                <el-button style="float: right; padding: 3px 0; margin-left: 10px;" type="text" @click="remove()">
+                    下架
+                </el-button>
+                <el-button style="float: right; padding: 3px 0;" type="text" @click="publish()">
+                    发布
+                </el-button>
+                <el-button style="float: right; padding: 3px 0;" type="text" @click="addOrEdit()">
                     添加
                 </el-button>
             </div>
-            <el-table ref="productTable" :data="list" style="width: 100%" border>
+            <el-table ref="list" :data="list" style="width: 100%" border>
                 <el-table-column type="selection" width="60" align="center"></el-table-column>
                 <el-table-column label="编号" width="100" align="center">
                     <template slot-scope="scope">{{scope.row.id}}</template>
                 </el-table-column>
                 <el-table-column label="商品图片" width="120" align="center">
-                    <template slot-scope="scope"><img style="height: 80px" :src="scope.row.pic"></template>
+                    <template slot-scope="scope">
+                        <el-image fit="contain" style="width: 80px; height: 80px" :src="scope.row.pic"></el-image>
+                    </template>
                 </el-table-column>
                 <el-table-column label="商品名称" align="center">
                     <template slot-scope="scope">
                         <p>{{scope.row.name}}</p>
-                        <p>品牌：{{scope.row.brandName}}</p>
                     </template>
                 </el-table-column>
-                <el-table-column label="价格/货号" width="120" align="center">
+                <el-table-column label="商品名称" align="center">
                     <template slot-scope="scope">
-                        <p>价格：￥{{scope.row.price}}</p>
-                        <p>货号：{{scope.row.productSn}}</p>
+                        <p>{{scope.row.brandName}}</p>
                     </template>
                 </el-table-column>
-                <el-table-column label="排序" width="100" align="center">
-                    <template slot-scope="scope">{{scope.row.sort}}</template>
+                <el-table-column label="预估价格" align="center" prop="price">
+                    <template slot-scope="scope">￥{{scope.row.price}}</template>
                 </el-table-column>
-                <el-table-column label="SKU库存" width="100" align="center">
+                <el-table-column label="货号" width="120" align="center" prop="productSn"></el-table-column>
+                <el-table-column label="状态" width="100" align="center">
                     <template slot-scope="scope">
-                        <el-button type="primary" icon="el-icon-edit" @click="handleShowSkuEditDialog(scope.$index, scope.row)" circle></el-button>
-                    </template>
-                </el-table-column>
-                <el-table-column label="销量" width="100" align="center">
-                    <template slot-scope="scope">{{scope.row.sale}}</template>
-                </el-table-column>
-                <el-table-column label="审核状态" width="100" align="center">
-                    <template slot-scope="scope">
-                        <p>{{scope.row.verifyStatus}}</p>
-                        <p>
-                            <el-button type="text">审核详情
-                            </el-button>
-                        </p>
+                        <el-tag size="small" :type="scope.row.publishStatus | publishStatusTagTypeFilter">{{scope.row.publishStatus | publishStatusTextFilter}}</el-tag>
                     </template>
                 </el-table-column>
                 <el-table-column label="操作" width="160" align="center">
                     <template slot-scope="scope">
                         <p>
-                            <el-button size="mini" @click="handleUpdateProduct(scope.$index, scope.row)">编辑
+                            <el-button size="mini" @click="addOrEdit(scope.row)">编辑
                             </el-button>
-                            <el-button size="mini" type="danger" @click="handleDelete(scope.$index, scope.row)">删除
+                            <el-button size="mini" type="danger" @click="onDelete(scope.row)">删除
                             </el-button>
                         </p>
                     </template>
@@ -105,49 +100,10 @@
         <div style="text-align: right; margin-top: 10px;">
             <el-pagination background @size-change="handleSizeChange" @current-change="handleCurrentChange" layout="total,sizes,prev,pager,next,jumper" :page-size="listQuery.size" :page-sizes="[5,10,20]" :current-page.sync="listQuery.current" :total="total"></el-pagination>
         </div>
-        
-        <!-- <el-dialog title="编辑货品信息" :visible.sync="editSkuInfo.dialogVisible" width="40%">
-            <span>商品货号：</span>
-            <span>{{editSkuInfo.productSn}}</span>
-            <el-input placeholder="按sku编号搜索" v-model="editSkuInfo.keyword" size="small" style="width: 50%;margin-left: 20px">
-                <el-button slot="append" icon="el-icon-search" @click="handleSearchEditSku"></el-button>
-            </el-input>
-            <el-table style="width: 100%;margin-top: 20px" :data="editSkuInfo.stockList" border>
-                <el-table-column label="SKU编号" align="center">
-                    <template slot-scope="scope">
-                        <el-input v-model="scope.row.skuCode"></el-input>
-                    </template>
-                </el-table-column>
-                <el-table-column v-for="(item,index) in editSkuInfo.productAttr" :label="item.name" :key="item.id" align="center">
-                    <template slot-scope="scope">
-                        {{getProductSkuSp(scope.row,index)}}
-                    </template>
-                </el-table-column>
-                <el-table-column label="销售价格" width="80" align="center">
-                    <template slot-scope="scope">
-                        <el-input v-model="scope.row.price"></el-input>
-                    </template>
-                </el-table-column>
-                <el-table-column label="商品库存" width="80" align="center">
-                    <template slot-scope="scope">
-                        <el-input v-model="scope.row.stock"></el-input>
-                    </template>
-                </el-table-column>
-                <el-table-column label="库存预警值" width="100" align="center">
-                    <template slot-scope="scope">
-                        <el-input v-model="scope.row.lowStock"></el-input>
-                    </template>
-                </el-table-column>
-            </el-table>
-            <span slot="footer" class="dialog-footer">
-                <el-button @click="editSkuInfo.dialogVisible = false">取 消</el-button>
-                <el-button type="primary" @click="handleEditSkuConfirm">确 定</el-button>
-            </span>
-        </el-dialog> -->
     </div>
 </template>
 <script>
-import { getPagination } from "@/api/pms/product";
+import { getPagination, remove, publish } from "@/api/pms/product";
 import { getList as getBrandList } from "@/api/pms/brand";
 import { getList as getCategoryList } from "@/api/pms/category";
 import listMixin from '@/mixin/list';
@@ -162,6 +118,11 @@ const defaultListQuery = {
     categoryId: null,
     brandId: null,
 };
+
+const UN_PUBLISHED = 0;
+const PUBLISHED = 1;
+const REMOVEED = 2;
+
 export default {
     name: "productList",
     mixins: [listMixin],
@@ -187,24 +148,20 @@ export default {
             },
             total: null,
             categoryIds: [],
+            PUBLISHED,
+            REMOVEED, UN_PUBLISHED,
             publishStatusOptions: [
                 {
-                    value: 1,
+                    value: UN_PUBLISHED,
+                    label: "未发布",
+                },
+                {
+                    value: PUBLISHED,
                     label: "上架",
                 },
                 {
-                    value: 0,
+                    value: REMOVEED,
                     label: "下架",
-                },
-            ],
-            verifyStatusOptions: [
-                {
-                    value: 1,
-                    label: "审核通过",
-                },
-                {
-                    value: 0,
-                    label: "未审核",
                 },
             ],
         };
@@ -215,17 +172,32 @@ export default {
         this.getCategoryList();
     },
     filters: {
-        verifyStatusFilter(value) {
+        publishStatusTextFilter(value) {
             if (value === 1) {
-                return "审核通过";
-            } else {
-                return "未审核";
+                return "已上架";
+            }
+            else if (value === 2) {
+                return "已下架";
+            }
+            else {
+                return "未发布";
+            }
+        },
+        publishStatusTagTypeFilter(value) {
+            if (value === 1) {
+                return "";
+            }
+            else if (value === 2) {
+                return "danger";
+            }
+            else {
+                return "warning";
             }
         },
     },
     methods: {
-        async getPagination(query) {
-            const resp = await getPagination(query);
+        async getPagination() {
+            const resp = await getPagination(this.listQuery);
             if (resp.code !== 0) {
                 return this.$message.error("获取数据失败");
             }
@@ -251,53 +223,58 @@ export default {
                 this.listQuery.categoryId = value[value.length - 1];
             }
         },
-        addOrEdit() {
-            this.$router.push({ path: "/pms/product/add-or-edit" });
-        },
-
-        getProductSkuSp(row, index) {
-            if (index === 0) {
-                return row.sp1;
-            } else if (index === 1) {
-                return row.sp2;
-            } else {
-                return row.sp3;
-            }
-        },
-
-        handleShowSkuEditDialog(index, row) {
-            
-        },
-        handleSearchEditSku() {
-            // fetchSkuStockList(this.editSkuInfo.productId, {
-            //     keyword: this.editSkuInfo.keyword,
-            // }).then((response) => {
-            //     this.editSkuInfo.stockList = response.data;
-            // });
-        },
-        handleEditSkuConfirm() {
-            if (this.editSkuInfo.stockList == null || this.editSkuInfo.stockList.length <= 0) {
-                this.$message({
-                    message: "暂无sku信息",
-                    type: "warning",
-                    duration: 1000,
-                });
-                return;
-            }
-            this.$confirm("是否要进行修改", "提示", {
-                confirmButtonText: "确定",
-                cancelButtonText: "取消",
-                type: "warning",
-            }).then(() => {
-                
+        addOrEdit(row) {
+            // 若要使用$router.push的params传参数，则不可适用path（会忽略params）
+            this.$router.push({ 
+                path: "/pms/product/add-or-edit" + (row ? `/${row.id}` : "")
             });
         },
-        handleDelete(index, row) {
+        onDelete(row) {
         },
-        handleUpdateProduct(index, row) {
-            this.$router.push({
-                path: "/pms/updateProduct",
-                query: { id: row.id },
+        remove() {
+            let checked = this.$refs.list.selection;
+            if (!checked.length) {
+                return this.$message.warning("请选择数据");
+            }
+            const matched = checked.every(item => item.publishStatus === PUBLISHED);
+            if (!matched) {
+                return this.$message.warning("请选择已上架的数据");
+            }
+            
+            this.$confirm("确认下架吗？", "提示", {
+                confirmButtonText: "确定",
+                cancelButtonText: "取消",
+            }).then(async () => {
+                const resp = await remove({ ids: checked.map(item => item.id)});
+                if (resp.code !== 0) {
+                    return this.$message.error("下架失败：" + resp.message);
+                }
+                this.$message.success("下架成功");
+                this.resetListQuery();
+                this.getPagination();
+            });
+        },
+        publish() {
+            let checked = this.$refs.list.selection;
+            if (!checked.length) {
+                return this.$message.warning("请选择数据");
+            }
+            const matched = checked.every(item => item.publishStatus !== PUBLISHED);
+            if (!matched) {
+                return this.$message.warning("请选择已下架或未发布的数据");
+            }
+
+            this.$confirm("确认发布吗？", "提示", {
+                confirmButtonText: "确定",
+                cancelButtonText: "取消",
+            }).then(async () => {
+                const resp = await publish({ ids: checked.map(item => item.id)});
+                if (resp.code !== 0) {
+                    return this.$message.error("发布失败" + resp.message);
+                }
+                this.$message.success("发布成功");
+                this.resetListQuery();
+                this.getPagination();
             });
         }
     },

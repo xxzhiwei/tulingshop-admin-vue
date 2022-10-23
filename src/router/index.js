@@ -78,15 +78,17 @@ export const asyncRoutes = [
                 }
             },
             {
+                name: "ProductAddt",
                 path: 'product/add-or-edit',
                 component: () => productAddOrEdit,
                 meta: {
-                    title: '添加',
+                    title: '添加商品',
                     activeMenu: '/pms/product'
                 },
                 hidden: true,
             },
             {
+                name: "ProductEdit",
                 path: 'product/add-or-edit/:id',
                 component: () => productAddOrEdit,
                 meta: {
