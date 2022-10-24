@@ -230,7 +230,7 @@
 <script>
 import { getList as getBrandList } from "@/api/pms/brand";
 import { getList as getCategoryList } from "@/api/pms/category";
-import { getList as getAttrGroupList } from "@/api/pms/productAttrGroup";
+import { getListByCategoryId as getAttrGroupList } from "@/api/pms/productAttrGroup";
 import { getList as getAttrList } from "@/api/pms/productAttr";
 import { save, getDetail, update } from "@/api/pms/product";
 import { copyProperties, getDifference } from "@/utils/common";
@@ -296,7 +296,6 @@ export default {
             skuSaleAttrList: null,
             isEditing: false,
             skuValueMap: null,
-            newSkuValueList: null,
             skusToRemove: [], // 永于保存已经存在数据库，并将要删除的sku
             skusSaved: [] // 从接口获取的原始sku数据
         }
@@ -507,11 +506,9 @@ export default {
                     });
                 }
             }
-
-            this.newSkuValueList = newSkuValueList;
             
             if (this.isEditing) {
-                const attrsToRemove = getDifference(Object.keys(this.skuValueMap), this.newSkuValueList);
+                const attrsToRemove = getDifference(Object.keys(this.skuValueMap), newSkuValueList);
                 if (attrsToRemove && attrsToRemove.length) {
                     // 查找对应id的sku
                     const skuIds = attrsToRemove.map(item => this.skuValueMap[item]);
@@ -524,8 +521,6 @@ export default {
 
             // 注意skusToRemove与skus的赋值先后顺序
             this.formData.skus = skuList;
-
-            
         },
         /**
          * 生成销售属性笛卡尔积；如有以下销售属性：
@@ -659,8 +654,5 @@ export default {
     }
     .product-add-or-edit-checkbox-group.el-checkbox-group .el-checkbox {
         margin-right: 10px;
-    }
-    .product-add-or-edit-el-form-item .el-form-item__label-wrap {
-        margin-left: 0 !important;
     }
 </style>

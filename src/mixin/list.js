@@ -35,7 +35,7 @@ export default {
                 }
             }
             this.listQuery.current = 1;
-            this.listQuery.size = 10;
+            this.listQuery.size = this.defaultListQuery.size;
         },
         search() {
             this.getPagination();
@@ -43,9 +43,11 @@ export default {
         handleSizeChange(value) {
             this.listQuery.current = 1;
             this.listQuery.size = value;
+            this.getPagination();
         },
         handleCurrentChange(value) {
             this.listQuery.current = value;
+            this.getPagination();
         },
     }
 }

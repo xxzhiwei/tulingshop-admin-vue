@@ -78,7 +78,6 @@ export const asyncRoutes = [
                 }
             },
             {
-                name: "ProductAddt",
                 path: 'product/add-or-edit',
                 component: () => productAddOrEdit,
                 meta: {
@@ -88,7 +87,6 @@ export const asyncRoutes = [
                 hidden: true,
             },
             {
-                name: "ProductEdit",
                 path: 'product/add-or-edit/:id',
                 component: () => productAddOrEdit,
                 meta: {
@@ -96,6 +94,34 @@ export const asyncRoutes = [
                     activeMenu: '/pms/product'
                 },
                 hidden: true,
+            },
+            {
+                path: 'brand',
+                component: () => import('@/views/pms/brand'),
+                meta: {
+                    title: '品牌管理'
+                }
+            },
+            {
+                path: 'category',
+                component: () => import('@/views/pms/category'),
+                meta: {
+                    title: '分类管理'
+                }
+            },
+            {
+                path: 'attrGroup',
+                component: () => import('@/views/pms/attrGroup'),
+                meta: {
+                    title: '属性分组管理'
+                }
+            },
+            {
+                path: 'attr',
+                component: () => import('@/views/pms/attr'),
+                meta: {
+                    title: '属性管理'
+                }
             },
         ],
         temporary: true

@@ -50,3 +50,11 @@ export function publish(params) {
         data: params
     });
 }
+
+export function del(params) {
+    return request({
+        url: `/product/del`,
+        method: 'post',
+        data: params
+    });
+}

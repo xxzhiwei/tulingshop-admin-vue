@@ -7,3 +7,27 @@ export function getList() {
         method: 'get'
     });
 }
+
+export function save(data) {
+    return request({
+        url: '/category/save',
+        method: 'post',
+        data
+    });
+}
+
+export function update(data) {
+    return request({
+        url: '/category/update',
+        method: 'post',
+        data
+    });
+}
+
+export function del(data) {
+    return request({
+        url: `/category/del`,
+        method: 'post',
+        data
+    });
+}

@@ -45,8 +45,8 @@
             </el-form>
             <div style="text-align:right;">
                 <el-button @click="dialogVisible = false">取 消</el-button>
-                <el-button type="primary" v-if="isEditing" @click="update">确 定</el-button>
-                <el-button type="primary" v-else @click="save">确 定</el-button>
+                <el-button type="primary" size="small" v-if="isEditing" @click="update">确 定</el-button>
+                <el-button type="primary" size="small" v-else @click="save">确 定</el-button>
             </div>
         </el-dialog>
     </div>

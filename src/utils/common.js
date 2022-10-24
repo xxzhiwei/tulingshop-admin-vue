@@ -56,3 +56,44 @@ export function getUUID() {
 export function getType(data) {
     return Object.prototype.toString.call(data).replace(/\[.*?\s(.*?)\]/, '$1')
 }
+
+/**
+ * 在树形结构中查询符合条件的值（包括其上级父类的值）【即会返回一组value】
+ * @param {Function} pattern 匹配规则
+ * @param {Array} list 树形结构
+ * @param {Object} options 默认情况下，读取属性为「key」；子结构为「children」
+ * @example const result = findKeys(item => item.id === 111, test);
+ * const test = [{"id":1,"children":[{"id":7,"children":null},{"id":29,"children": null}]}, {"id":2,"children":[{"id":71,"children":null},{"id":111,"children":null}]}];
+ */
+export function findKeys(pattern, list, options={}) {
+    options = Object.assign({ key: "id", children: "children" }, options);
+    let matched = false;
+    const values = [];
+    let result = [];
+
+    function fn(list, deep) {
+        for (let i=0; i<list.length; i++) {
+            const item = list[i];
+            if (pattern(item)) {
+                matched = true;
+                values.push(item[options.key]);
+                result = values.slice(-deep);
+                break;
+            }
+            else {
+                if (matched) {
+                    break;
+                }
+                if (list[i].children) {
+                    // 深度
+                    let deep = 1;
+                    values.push(item[options.key]);
+                    fn(item[options.children], ++deep);
+                }
+            }
+        }
+    }
+
+    fn(list);
+    return result;
+}

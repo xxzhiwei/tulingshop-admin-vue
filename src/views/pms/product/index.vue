@@ -2,20 +2,20 @@
     <div class="app-container">
         <el-card style="margin-bottom: 20px;" :body-style="{ 'padding-bottom': '2px' }">
             <el-form :inline="true" size="mini">
-                <el-form-item label="商品名称">
+                <el-form-item label="名称">
                     <el-input v-model="listQuery.keyword" placeholder="请输入"></el-input>
                 </el-form-item>
-                <el-form-item label="商品货号">
+                <el-form-item label="货号">
                     <el-input v-model="listQuery.productSn" placeholder="请输入"></el-input>
                 </el-form-item>
-                <el-form-item label="商品分类">
+                <el-form-item label="分类">
                     <el-cascader
                         style="width: 168px;"
                         v-model="categoryIds"
                         :options="categoryList"
                         @change="handleCascaderChange" :props="categoryProps"></el-cascader>
                 </el-form-item>
-                <el-form-item label="商品品牌">
+                <el-form-item label="品牌">
                     <el-select style="width: 168px;" v-model="listQuery.brandId" placeholder="请选择" clearable>
                         <el-option v-for="item in brandList" :key="item.id" :label="item.name" :value="item.id">
                         </el-option>
@@ -60,17 +60,17 @@
                 <el-table-column label="编号" width="100" align="center">
                     <template slot-scope="scope">{{scope.row.id}}</template>
                 </el-table-column>
-                <el-table-column label="商品图片" width="120" align="center">
+                <el-table-column label="图片" width="120" align="center">
                     <template slot-scope="scope">
                         <el-image fit="contain" style="width: 80px; height: 80px" :src="scope.row.pic"></el-image>
                     </template>
                 </el-table-column>
-                <el-table-column label="商品名称" align="center">
+                <el-table-column label="名称" align="center">
                     <template slot-scope="scope">
                         <p>{{scope.row.name}}</p>
                     </template>
                 </el-table-column>
-                <el-table-column label="商品名称" align="center">
+                <el-table-column label="名称" align="center">
                     <template slot-scope="scope">
                         <p>{{scope.row.brandName}}</p>
                     </template>
@@ -89,7 +89,7 @@
                         <p>
                             <el-button size="mini" @click="addOrEdit(scope.row)">编辑
                             </el-button>
-                            <el-button size="mini" type="danger" @click="onDelete(scope.row)">删除
+                            <el-button size="mini" type="danger" @click="del(scope.row)">删除
                             </el-button>
                         </p>
                     </template>
@@ -103,7 +103,7 @@
     </div>
 </template>
 <script>
-import { getPagination, remove, publish } from "@/api/pms/product";
+import { getPagination, remove, publish, del } from "@/api/pms/product";
 import { getList as getBrandList } from "@/api/pms/brand";
 import { getList as getCategoryList } from "@/api/pms/category";
 import listMixin from '@/mixin/list';
@@ -128,15 +128,6 @@ export default {
     mixins: [listMixin],
     data() {
         return {
-            editSkuInfo: {
-                dialogVisible: false,
-                productId: null,
-                productSn: "",
-                productAttributeCategoryId: null,
-                stockList: [],
-                productAttr: [],
-                keyword: null,
-            },
             defaultListQuery: {...defaultListQuery, 'this:array': 'categoryIds'},
             listQuery: Object.assign({}, defaultListQuery),
             list: null,
@@ -229,7 +220,16 @@ export default {
                 path: "/pms/product/add-or-edit" + (row ? `/${row.id}` : "")
             });
         },
-        onDelete(row) {
+        del(row) {
+            this.$confirm("确认删除吗？", "提示")
+            .then(async () => {
+                const resp = await del({ id: row.id });
+                if (resp.code !== 0) {
+                    return this.$message.error("操作失败：" + resp.message);
+                }
+                this.$message.success("操作失败");
+                this.getPagination();
+            });
         },
         remove() {
             let checked = this.$refs.list.selection;
@@ -247,10 +247,9 @@ export default {
             }).then(async () => {
                 const resp = await remove({ ids: checked.map(item => item.id)});
                 if (resp.code !== 0) {
-                    return this.$message.error("下架失败：" + resp.message);
+                    return this.$message.error("操作失败：" + resp.message);
                 }
-                this.$message.success("下架成功");
-                this.resetListQuery();
+                this.$message.success("操作成功");
                 this.getPagination();
             });
         },
@@ -270,9 +269,9 @@ export default {
             }).then(async () => {
                 const resp = await publish({ ids: checked.map(item => item.id)});
                 if (resp.code !== 0) {
-                    return this.$message.error("发布失败" + resp.message);
+                    return this.$message.error("操作失败" + resp.message);
                 }
-                this.$message.success("发布成功");
+                this.$message.success("操作成功");
                 this.resetListQuery();
                 this.getPagination();
             });

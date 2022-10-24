@@ -2,29 +2,16 @@
     <div class="app-container">
         <div style="margin-bottom: 10px;">
             <div style="margin-bottom: 10px;">
-                <el-button type="primary" size="small" @click="showDialogForAdding()">新增权限</el-button>
-                <!-- <el-button type="danger" size="small">删除权限</el-button> -->
-            </div>
-            <div>
-                <el-tag type="success">
-                    <span style="margin-right: 10px;">
-                        <i class="el-icon-menu" /> 菜单权限
-                    </span>
-                    <span>
-                        <i class="el-icon-position"></i> 操作权限
-                    </span>
-                </el-tag>
+                <el-button type="primary" size="small" @click="showDialogForAdding()">新增分类</el-button>
             </div>
         </div>
-        <el-tree :data="list" node-key="id" default-expand-all :expand-on-click-node="false">
+        <el-tree :data="list" node-key="id" :expand-on-click-node="false">
             <span slot-scope="{ data }">
                 <span style="font-size: 14px;">
-                    <i v-if="data.type === 1" class="el-icon-menu" />
-                    <i v-else class="el-icon-position" />
                     {{ data.name }}
                 </span>
                 <span style="margin-left: 10px;">
-                    <el-button v-if="data.type === 1" type="text" size="mini" @click="() => showDialogForAdding(data)">
+                    <el-button v-if="data.level < 1" type="text" size="mini" @click="() => showDialogForAdding(data)">
                         添加
                     </el-button>
                     <el-button type="text" size="mini" @click="() => showDialogForEditing(data)">
@@ -37,7 +24,7 @@
             </span>
         </el-tree>
 
-        <el-dialog :title="isEditing ? '编辑权限' : '新增权限'" :visible.sync="dialogVisible" width="45%">
+        <el-dialog :title="isEditing ? '编辑' : '新增'" :visible.sync="dialogVisible" width="45%">
             <el-form :model="formData" label-width="80px">
                 <el-form-item label="父级">
                     <el-popover ref="popover" placement="bottom-start" trigger="click">
@@ -46,18 +33,8 @@
                     </el-popover>
                     <el-input v-model="formData.parentName" v-popover:popover :readonly="true" placeholder="" :disabled="isEditing"></el-input>
                 </el-form-item>
-                <el-form-item label="类型">
-                    <el-radio :disabled="isEditing" v-model="formData.type" :label="1">菜单权限</el-radio>
-                    <el-radio :disabled="isEditing" v-model="formData.type" :label="2">操作权限</el-radio>
-                </el-form-item>
                 <el-form-item label="名称">
                     <el-input v-model="formData.name"></el-input>
-                </el-form-item>
-                <el-form-item label="权限码">
-                    <el-input v-model="formData.value"></el-input>
-                </el-form-item>
-                <el-form-item label="路径" v-if="formData.type === 1">
-                    <el-input v-model="formData.path"></el-input>
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
@@ -70,44 +47,28 @@
 </template>
 
 <script>
-import {
-    getList,
-    save,
-    update,
-    del,
-} from "@/api/permission";
+import { getList, save, update, del } from "@/api/pms/category";
 import { copyProperties } from '@/utils/common.js';
 
 const defaultFormData = {
     id: "",
-    type: 1,
-    value: "",
+    level: 0,
     name: "",
-    path: "",
-    parentId: -1,
-    // extra: "", // json数据【要做防xss攻击？】
+    parentId: 0,
     parentName: "",
 };
 
 const extraOption = {
-    id: -1,
-    value: "1",
-    name: "根节点",
-    parentId: -1,
-    children: []
+    id: 0, // 用于赋予parentId属性
+    level: -1, // +1 => 0
+    name: "一级分类"
 }
 
-function getMenu(permissionList) {
-    const p = permissionList.filter((p) => {
-        if (p.type === 1) {
-            if (p.children && p.children.length) {
-                p.children = getMenu(p.children);
-            }
-            return true;
-        }
-        return false;
+function getMenu(list) {
+    const items = list.filter((item) => {
+        return item.level === 0
     });
-    return p;
+    return items;
 }
 
 export default {
@@ -116,14 +77,13 @@ export default {
             list: [],
             props: {
                 label: "name",
-                children: "children",
+                children: "x" // 不显示children
             },
             formData: {
                 ...defaultFormData,
             },
             isEditing: false,
-            dialogVisible: false,
-            tempType: null
+            dialogVisible: false
         };
     },
     computed: {
@@ -131,7 +91,7 @@ export default {
             if (!this.list.length) {
                 return [];
             }
-            const _menu = getMenu(JSON.parse(JSON.stringify(this.list)));;
+            const _menu = getMenu(JSON.parse(JSON.stringify(this.list)));
             _menu.unshift(extraOption);
             // [].filter()本身不会修改数组，但是在getMenu()方法里直接对传入的数组做修改了，因此这里使用深复制再对其进行操作
             return _menu;
@@ -151,12 +111,10 @@ export default {
         showDialogForAdding(data) {
             this.isEditing = false;
             this.formData = { ...defaultFormData };
-            if (this.tempType != null) {
-                this.formData.type = this.tempType;
-            }
             if (data) {
                 this.formData.parentId = data.id;
                 this.formData.parentName = data.name;
+                this.formData.level = data.level + 1;
                 this.$nextTick(() => {
                     this.$refs.menuTree.setCurrentKey(this.formData.parentId);
                 });
@@ -164,9 +122,10 @@ export default {
             else {
                 this.formData.parentName = extraOption.name;
                 this.$nextTick(() => {
-                    this.$refs.menuTree.setCurrentKey(-1);
+                    this.$refs.menuTree.setCurrentKey(extraOption.id);
                 });
             }
+
             this.dialogVisible = true;
         },
         async save() {
@@ -178,7 +137,6 @@ export default {
                 this.$message.error("操作失败");
                 return;
             }
-            this.tempType = this.formData.type;
             this.$message.success("操作成功");
             this.getList();
         },
@@ -186,9 +144,8 @@ export default {
             this.isEditing = true;
 
             this.formData = copyProperties(data, { ...defaultFormData })
-
             this.dialogVisible = true;
-            // 非根权限
+            // 非根菜单时，高亮【此处parentId为0的为一级分类】
             if (this.formData.parentId) {
                 this.$nextTick(() => {
                     this.$refs.menuTree.setCurrentKey(this.formData.parentId);
@@ -235,6 +192,7 @@ export default {
         currentChange(data) {
             this.formData.parentId = data.id;
             this.formData.parentName = data.name;
+            this.formData.level = data.level + 1;
             this.$refs.popover.doClose();
         },
     },
