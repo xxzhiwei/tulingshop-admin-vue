@@ -113,8 +113,13 @@
 
                 <el-col v-if="active === 4">
                     <el-form :model="formData" :ref="SKU" label-width="auto" size="mini">
+
                         <el-form-item label-width="0">
-                            <el-table :data="formData.skus" style="width: 100%" size="small" stripe>
+                            <el-tag size="small">新增</el-tag>
+                        </el-form-item>
+                        <el-form-item label-width="0">
+                            <el-table ref="skusToSave" :data="formData.skus" style="width: 100%" size="small" stripe>
+                                <el-table-column type="selection" width="55" align="center"></el-table-column>
                                 <el-table-column label="属性组合">
                                     <el-table-column v-for="(item, index) in formData.saleAttrs" :label="item.name" :key="item.id">
                                         <template slot-scope="{ row }">
@@ -139,6 +144,38 @@
                                 </el-table-column>
                             </el-table>
                         </el-form-item>
+
+                        <template v-if="skusToRemove.length > 0">
+                            <el-form-item label-width="0">
+                                <el-tag size="small" type="danger">即将删除</el-tag>
+                            </el-form-item>
+                            <el-form-item label-width="0">
+                                <el-table :data="skusToRemove" style="width: 100%" size="small" stripe>
+                                    <el-table-column label="属性组合">
+                                        <el-table-column v-for="(item, index) in formData.saleAttrs" :label="item.name" :key="item.id">
+                                            <template slot-scope="{ row }">
+                                                <span style="margin-left: 10px">{{ row.attrs[index].value }}</span>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table-column>
+                                    <el-table-column label="sku名称" min-width="255px">
+                                        <template slot-scope="scope">
+                                            <el-input v-model="scope.row.name"></el-input>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column label="价格">
+                                        <template slot-scope="scope">
+                                            <el-input v-model="scope.row.price"></el-input>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column label="库存">
+                                        <template slot-scope="scope">
+                                            <el-input v-model="scope.row.stock"></el-input>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                            </el-form-item>
+                        </template>
                         
                         <el-form-item>
                             <el-button type="primary" @click="previous()">上一步</el-button>
@@ -260,6 +297,7 @@ export default {
             isEditing: false,
             skuValueMap: null,
             newSkuValueList: null,
+            skusToRemove: [], // 永于保存已经存在数据库，并将要删除的sku
             skusSaved: [] // 从接口获取的原始sku数据
         }
     },
@@ -471,7 +509,23 @@ export default {
             }
 
             this.newSkuValueList = newSkuValueList;
+            
+            if (this.isEditing) {
+                const attrsToRemove = getDifference(Object.keys(this.skuValueMap), this.newSkuValueList);
+                if (attrsToRemove && attrsToRemove.length) {
+                    // 查找对应id的sku
+                    const skuIds = attrsToRemove.map(item => this.skuValueMap[item]);
+                    this.skusToRemove = this.skusSaved.filter(item => skuIds.includes(item.id));
+                }
+                else {
+                    this.skusToRemove = [];
+                }
+            }
+
+            // 注意skusToRemove与skus的赋值先后顺序
             this.formData.skus = skuList;
+
+            
         },
         /**
          * 生成销售属性笛卡尔积；如有以下销售属性：
@@ -539,6 +593,7 @@ export default {
                 let resp;
                 // 若为编辑时，获取将要删除的skuId
                 if (this.isEditing) {
+                    others.removing = this.skusToRemove.map(item => item.id);
                     resp = await update(others)
                 }
                 else {
@@ -584,7 +639,7 @@ export default {
 
             return [...new Set(this.skuSaleAttrList.filter(item => item.attrId === id).map(item => item.value))];
         },
-        // 【移除即将新增的sku，移除该功能；与生成sku处冲突了；取而代之的应该是，如果没有某个sku，则将其库存设为0？】
+        // 【移除即将新增的sku，移除该功能；与生成sku处冲突了；取而代之的应该是，如果没有某个sku，则将其库存设为0？
         // remove() {
         //     const checked = this.$refs.skusToSave.selection;
         //     if (!checked.length) {
