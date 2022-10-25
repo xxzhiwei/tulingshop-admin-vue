@@ -27,7 +27,7 @@
         <el-dialog :title="isEditing ? '编辑' : '新增'" :visible.sync="dialogVisible" width="45%">
             <el-form :model="formData" label-width="80px">
                 <el-form-item label="父级">
-                    <el-popover ref="popover" placement="bottom-start" trigger="click">
+                    <el-popover :disabled="isEditing" ref="popover" placement="bottom-start" trigger="click">
                         <el-tree ref="menuTree" :data="menu" :props="props" node-key="id" @current-change="currentChange" :default-expand-all="true" :highlight-current="true" :expand-on-click-node="false">
                         </el-tree>
                     </el-popover>

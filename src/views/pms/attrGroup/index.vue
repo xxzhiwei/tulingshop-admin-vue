@@ -25,11 +25,6 @@
                         <p>{{scope.row.name}}</p>
                     </template>
                 </el-table-column>
-                <el-table-column label="关联分类" align="center">
-                    <template slot-scope="scope">
-                        <p>{{scope.row.categoryName}}</p>
-                    </template>
-                </el-table-column>
                 <el-table-column label="操作" width="160" align="center">
                     <template slot-scope="scope">
                         <p>
@@ -52,13 +47,6 @@
                 <el-form-item label="名称">
                     <el-input v-model="formData.name"></el-input>
                 </el-form-item>
-                <el-form-item label="关联分类">
-                    <el-cascader
-                        style="width: 168px;"
-                        v-model="categoryIds"
-                        :options="categoryList"
-                        @change="handleCascaderChange" :props="categoryProps"></el-cascader>
-                </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
                 <el-button @click="dialogVisible = false" size="small">取 消</el-button>
@@ -70,10 +58,9 @@
 </template>
 <script>
 import { getPagination, save, update, del } from "@/api/pms/productAttrGroup";
-import { getList as getCategoryList } from "@/api/pms/category";
 import listMixin from '@/mixin/list';
 
-import { copyProperties, findKeys } from '@/utils/common.js';
+import { copyProperties } from '@/utils/common.js';
 
 const defaultListQuery = {
     keyword: null,
@@ -84,8 +71,7 @@ const defaultListQuery = {
 
 const defaultFormData = {
     id: null,
-    name: "",
-    categoryId: ""
+    name: ""
 };
 
 export default {
@@ -109,7 +95,6 @@ export default {
         };
     },
     created() {
-        this.getCategoryList();
         this.getPagination();
     },
     methods: {
@@ -133,8 +118,7 @@ export default {
         showDialogForEditing(data) {
             this.isEditing = true;
 
-            this.formData = copyProperties(data, this.formData)
-            this.categoryIds = findKeys(item => item.id === data.categoryId, this.categoryList);
+            this.formData = copyProperties(data, this.formData);
             this.dialogVisible = true;
         },
         async update() {
@@ -168,19 +152,7 @@ export default {
                 this.$message.success("操作失败");
                 this.getPagination();
             });
-        },
-        handleCascaderChange(value) {
-            if (value && value.length) {
-                this.formData.categoryId = value[value.length - 1];
-            }
-        },
-        async getCategoryList() {
-            const resp = await getCategoryList();
-            if (resp.code !== 0) {
-                return this.$message.error("获取分类列表失败");
-            }
-            this.categoryList = resp.data;
-        },
+        }
     },
 };
 </script>

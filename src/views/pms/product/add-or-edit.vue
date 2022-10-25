@@ -7,7 +7,7 @@
                         <el-step v-for="(value, key) in steps" :key="key" :title="value"></el-step>
                     </el-steps>
                 </el-col>
-                <!-- step1：基本信息 -->
+
                 <el-col v-if="active === 1" :span="18">
                     <el-form :model="formData" :ref="BASE" label-width="auto" size="mini">
                         <el-form-item label="选择分类" prop="productCategoryId" required>
@@ -233,7 +233,7 @@ import { getList as getCategoryList } from "@/api/pms/category";
 import { getListByCategoryId as getAttrGroupList } from "@/api/pms/productAttrGroup";
 import { getList as getAttrList } from "@/api/pms/productAttr";
 import { save, getDetail, update } from "@/api/pms/product";
-import { copyProperties, getDifference } from "@/utils/common";
+import { copyProperties, getDifference, findKeys } from "@/utils/common";
 
 const BASE = 'base';
 const ATTR = 'attr';
@@ -269,7 +269,7 @@ const defaultFormData = {
     publishStatus: 1,
     skus: [],
     abc: "",
-    categoryIds: "",
+    // categoryIds: "",
     unit: "",
     weight: "",
     price: "",
@@ -300,7 +300,9 @@ export default {
             skusSaved: [] // 从接口获取的原始sku数据
         }
     },
-    created() {
+    async created() {
+
+        this.getCategoryList();
         // 查看&编辑
         const { id } = this.$route.params;
         if (id) {
@@ -309,7 +311,6 @@ export default {
         }
 
         this.getBrandList();
-        this.getCategoryList();
     },
     computed: {
         currentFormRefName() {
@@ -317,6 +318,20 @@ export default {
                 return "";
             }
             return this.formRefNames[this.active - 1];
+        },
+        categoryListAndCategoryId() {
+            return {
+                categoryList: this.categoryList,
+                categoryId: this.formData.productCategoryId
+            }
+        }
+    },
+    watch: {
+        // 同时监听两个属性
+        categoryListAndCategoryId(n) {
+            if (n.categoryList.length && n.categoryId) {
+                this.categoryIds = findKeys(item => item.id === n.categoryId, n.categoryList);
+            }
         }
     },
     methods: {
@@ -325,6 +340,7 @@ export default {
                 this.active--;
             }
         },
+        // 检查必填表单
         check() {
             if (!this.currentFormRefName) {
                 return;
@@ -338,7 +354,6 @@ export default {
         },
         async next() {
             try {
-                // 检查必填表单
                 this.check();
                 
                 switch (this.currentFormRefName) {
@@ -433,7 +448,7 @@ export default {
         },
         handleCascaderChange(value) {
             if (value && value.length) {
-                this.formData.categoryIds = value.join(",");
+                // this.formData.categoryIds = value.join(",");
                 this.formData.productCategoryId = value[value.length - 1];
             }
         },
@@ -611,7 +626,7 @@ export default {
             }
             this.formData = copyProperties(resp.data, this.formData);
             this.skusSaved = this.formData.skus;
-            this.categoryIds = this.formData.categoryIds.split(",").map(item => +item);
+            // this.categoryIds = this.formData.categoryIds.split(",").map(item => +item);
             
             // 生成sku映射关系
             const skuValueMap = {};

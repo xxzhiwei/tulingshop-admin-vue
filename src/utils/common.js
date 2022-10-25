@@ -62,22 +62,23 @@ export function getType(data) {
  * @param {Function} pattern 匹配规则
  * @param {Array} list 树形结构
  * @param {Object} options 默认情况下，读取属性为「key」；子结构为「children」
- * @example const result = findKeys(item => item.id === 111, test);
- * const test = [{"id":1,"children":[{"id":7,"children":null},{"id":29,"children": null}]}, {"id":2,"children":[{"id":71,"children":null},{"id":111,"children":null}]}];
  */
 export function findKeys(pattern, list, options={}) {
     options = Object.assign({ key: "id", children: "children" }, options);
     let matched = false;
-    const values = [];
     let result = [];
+    let values = [];
+    let deep = 0;
 
-    function fn(list, deep) {
+    // _deep保存了当前层的上一层的深度
+    function run(list, _deep) {
         for (let i=0; i<list.length; i++) {
             const item = list[i];
+            deep = _deep;
+            values[_deep] = item[options.key];
             if (pattern(item)) {
                 matched = true;
-                values.push(item[options.key]);
-                result = values.slice(-deep);
+                result = values.slice(0, _deep + 1);
                 break;
             }
             else {
@@ -85,15 +86,13 @@ export function findKeys(pattern, list, options={}) {
                     break;
                 }
                 if (list[i].children) {
-                    // 深度
-                    let deep = 1;
-                    values.push(item[options.key]);
-                    fn(item[options.children], ++deep);
+                    deep++;
+                    run(item[options.children], deep);
                 }
             }
         }
     }
+    run(list, deep);
 
-    fn(list);
     return result;
 }
