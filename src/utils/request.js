@@ -19,11 +19,16 @@ let noticed = false;
 let popuped = false;
 let refreshing = false;
 
-function gotoLoginPage(message, redirectPath) {
+function gotoLoginPage(message, fullPath) {
     MessageBox(message, "提示", {
         confirmButtonText: '确定'
     }).then(() => {
-        router.push(`/login?redirect=${redirectPath}`);
+
+        let path = "/login";
+        if (!fullPath.startsWith(path)) {
+            path += `?redirect=${fullPath}`;
+        }
+        router.push(path);
     });
 }
 

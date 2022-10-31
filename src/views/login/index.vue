@@ -71,7 +71,7 @@ export default {
                     }
                     this.$router.push({ path: this.redirect || '/' });
 
-                    const { accessToken, refreshToken, baseInfo: user } = resp.data;
+                    const { accessToken, refreshToken, payload: user } = resp.data;
                     this.$store.dispatch('user/saveLoginInfo', { accessToken, refreshToken, user });
                 }).finally(() => {
                     this.loading = false;

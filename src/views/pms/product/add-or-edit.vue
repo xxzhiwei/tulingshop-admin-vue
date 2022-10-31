@@ -296,20 +296,19 @@ export default {
             skuSaleAttrList: null,
             isEditing: false,
             skuValueMap: null,
-            skusToRemove: [], // 永于保存已经存在数据库，并将要删除的sku
+            skusToRemove: [], // 用于保存已经存在数据库，并将要删除的sku
             skusSaved: [] // 从接口获取的原始sku数据
         }
     },
     async created() {
-
-        this.getCategoryList();
-        // 查看&编辑
+        // 查看&编辑【先获取详情信息，不会出现意外的情况；慢是会慢一点】
         const { id } = this.$route.params;
         if (id) {
             this.isEditing = true;
-            this.getDetail(id);
+            await this.getDetail(id);
         }
 
+        this.getCategoryList();
         this.getBrandList();
     },
     computed: {
@@ -319,18 +318,11 @@ export default {
             }
             return this.formRefNames[this.active - 1];
         },
-        categoryListAndCategoryId() {
-            return {
-                categoryList: this.categoryList,
-                categoryId: this.formData.productCategoryId
-            }
-        }
     },
     watch: {
-        // 同时监听两个属性
-        categoryListAndCategoryId(n) {
-            if (n.categoryList.length && n.categoryId) {
-                this.categoryIds = findKeys(item => item.id === n.categoryId, n.categoryList);
+        categoryList(n) {
+            if (n.length) {
+                this.categoryIds = findKeys(item => item.id === this.formData.productCategoryId, n);
             }
         }
     },
@@ -626,7 +618,6 @@ export default {
             }
             this.formData = copyProperties(resp.data, this.formData);
             this.skusSaved = this.formData.skus;
-            // this.categoryIds = this.formData.categoryIds.split(",").map(item => +item);
             
             // 生成sku映射关系
             const skuValueMap = {};
@@ -648,16 +639,7 @@ export default {
             }
 
             return [...new Set(this.skuSaleAttrList.filter(item => item.attrId === id).map(item => item.value))];
-        },
-        // 【移除即将新增的sku，移除该功能；与生成sku处冲突了；取而代之的应该是，如果没有某个sku，则将其库存设为0？
-        // remove() {
-        //     const checked = this.$refs.skusToSave.selection;
-        //     if (!checked.length) {
-        //         return this.$message.warning("请选择数据");
-        //     }
-        //     this.formData.skus = this.formData.skus.filter(item => !checked.includes(item));
-        //     this.skusToRemove.push(...checked.filter(item => item.id));
-        // }
+        }
     }
 }
 </script>
