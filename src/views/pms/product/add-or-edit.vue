@@ -119,7 +119,6 @@
                         </el-form-item>
                         <el-form-item label-width="0">
                             <el-table ref="skusToSave" :data="formData.skus" style="width: 100%" size="small" stripe>
-                                <el-table-column type="selection" width="55" align="center"></el-table-column>
                                 <el-table-column label="属性组合">
                                     <el-table-column v-for="(item, index) in formData.saleAttrs" :label="item.name" :key="item.id">
                                         <template slot-scope="{ row }">
@@ -394,14 +393,27 @@ export default {
             const _attrGroupList = [];
             for (const item of resp.data) {
                 let _attrs;
-                // 若为查看编辑状态，则从服务器返回的数据中查找
+                // 若为查看编辑状态，则从服务器返回的数据中查找【但由于是从不同表中查询的，所以一些数据得由前端进行处理】
                 if (this.isEditing) {
+                    const map = {};
+
                     _attrs = this.formData.attrs.filter(attrItem => attrItem.groupId === item.id).map(attrItem => {
+                        let _attr = map[attrItem.attrId];
+                        if (!_attr) {
+                            _attr = item.attrs.find(_attrItem => _attrItem.id === attrItem.attrId);
+                            if (!_attr) {
+                                throw new Error('无法找到对应的attr');
+                            }
+                            map[_attr.id] = _attr;
+                        }
+                        attrItem.type = _attr.type;
+                        
                         if (attrItem.type === 2) {
-                            attrItem.value = attrItem.vaue.join(",");
+                            attrItem.value = attrItem.value.split(",");
                         }
                         return attrItem;
                     });
+                    console.log(_attrs);
                 }
                 else {
                     _attrs = []; // 每个分组的属性集合
@@ -409,7 +421,8 @@ export default {
                         _attrs.push({
                             attrId: attrItem.id,
                             name: attrItem.name,
-                            value: attrItem.type === 2 ? [] : ''
+                            value: attrItem.type === 2 ? [] : '',
+                            type: attrItem.type
                         });
                     }
                 }
@@ -587,7 +600,16 @@ export default {
 
                 for (const item of attrGroups) {
                     for (const innerItem of item) {
-                        attrs.push(innerItem);
+                        // 多选时，在提交数据前需要把Array拆为字符串
+                        if (innerItem.type === 2) {
+                            attrs.push({
+                                ...innerItem,
+                                value: innerItem.value.join(',')
+                            });
+                        }
+                        else {
+                            attrs.push(innerItem);
+                        }
                     }
                 }
                 others.attrs = attrs;
