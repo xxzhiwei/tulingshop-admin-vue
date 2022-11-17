@@ -61,12 +61,41 @@ const productAddOrEdit = import('@/views/pms/product/add-or-edit');
 
 export const asyncRoutes = [
     {
+        path: '/oms',
+        component: Layout,
+        redirect: '/oms/order',
+        alwaysShow: true,
+        meta: {
+            title: '订单模块',
+            icon: 'el-icon-setting'
+        },
+        children: [
+            {
+                path: 'order',
+                component: () => import('@/views/oms/order'),
+                meta: {
+                    title: '订单管理'
+                },
+            },
+            {
+                path: 'order/detail',
+                component: () => import('@/views/oms/order/detail'),
+                meta: {
+                    title: '订单详情',
+                    activeMenu: '/oms/order',
+                },
+                hidden: true,
+            },
+        ],
+        temporary: true
+    },
+    {
         path: '/pms',
         component: Layout,
         redirect: '/pms/product',
         alwaysShow: true,
         meta: {
-            title: '采购管理',
+            title: '商品模块',
             icon: 'el-icon-setting'
         },
         children: [

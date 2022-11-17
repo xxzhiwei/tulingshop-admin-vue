@@ -18,6 +18,7 @@ let times = 0;
 let noticed = false;
 let popuped = false;
 let refreshing = false;
+let globalTimes = 0; // 防止无限重试的问题
 
 function gotoLoginPage(message, fullPath) {
     MessageBox(message, "提示", {
@@ -42,6 +43,7 @@ async function respHandler(resp) {
             // 若没refreshToken时，提示用户前往登录（与其过期一样的逻辑
             let accessToken = store.state.user.accessToken;
             const refreshToken = store.state.user.refreshToken;
+            
             if (!refreshToken) {
                 // 多个请求40101的情况下，只提示一次
                 if (noticed) {
@@ -84,8 +86,9 @@ async function respHandler(resp) {
                 refreshing = false;
                 // 若重新请求成功，请求失败那个响应结果将会被忽略，以service(response.config)的结果代替
                 if (refreshResp && refreshResp.code === 0) {
-                    const { accessToken, refreshToken } = refreshResp.data;
+                    const { accessToken, refreshToken, payload: user } = refreshResp.data;
                     store.commit("user/SET_ACCESS_TOKEN", { accessToken });
+                    store.commit("user/SET_USER", { user });
                     if (refreshToken) {
                         commit("user/SET_REFRESH_TOKEN", { refreshToken });
                     }
@@ -133,15 +136,23 @@ service.interceptors.request.use(
 // response interceptor
 service.interceptors.response.use(
     async response => {
-        const data = respHandler(response) || {};
+        const data = respHandler(response);
         return data;
     },
-    error => {
+    async error => {
         console.log(error.response); // for debug
-        if (error.response) {
-            const retryResp = respHandler(error.response);
-            // 回返回一个undefined，导致后续的接口判断处触发异常无法提示信息【这刚好符合需求，本来出错的时候，就不想让其提示】
-            return Promise.resolve(retryResp);
+        if (error.response && globalTimes < 5) {
+            const retryResp = await respHandler(error.response, error.config);
+            if (!retryResp) {
+                globalTimes++;
+            }
+            else {
+                if (globalTimes > 0) {
+                    globalTimes = 0;
+                }
+            }
+            // 回返回一个Promise<undefined>，导致后续的接口判断处触发异常无法提示信息【这刚好符合需求，本来出错的时候，就不想让其提示】
+            return Promise.resolve(retryResp || error.response.data || error.response);
         }
         
         Message({
@@ -150,7 +161,7 @@ service.interceptors.response.use(
             duration: 5 * 1000
         });
 
-        return Promise.reject(error.response);
+        return Promise.reject(error);
     }
 );
 

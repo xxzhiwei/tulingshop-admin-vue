@@ -56,7 +56,7 @@ export default {
                     this.$router.push(`/login`);
                 }).catch(() => {
                     console.log('cancel');
-                })
+                });
         },
     },
 };

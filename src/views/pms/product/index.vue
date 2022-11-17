@@ -1,4 +1,4 @@
-<template> 
+<template>
     <div class="app-container">
         <el-card style="margin-bottom: 20px;" :body-style="{ 'padding-bottom': '2px' }">
             <el-form :inline="true" size="mini">
@@ -70,7 +70,7 @@
                         <p>{{scope.row.name}}</p>
                     </template>
                 </el-table-column>
-                <el-table-column label="名称" align="center">
+                <el-table-column label="品牌" align="center">
                     <template slot-scope="scope">
                         <p>{{scope.row.brandName}}</p>
                     </template>

@@ -1,6 +1,6 @@
 <template>
     <div class="app-container">
-        <el-card style="width: 80%; padding: 40px 40px 10px;;">
+        <el-card style="padding: 40px 40px 10px;">
             <el-row>
                 <el-col style="margin-bottom: 40px;">
                     <el-steps :active="active" align-center>
@@ -115,7 +115,7 @@
                     <el-form :model="formData" :ref="SKU" label-width="auto" size="mini">
 
                         <el-form-item label-width="0">
-                            <el-tag size="small">新增</el-tag>
+                            <el-tag size="small">{{isEditing ? '编辑' : '新增'}}</el-tag>
                         </el-form-item>
                         <el-form-item label-width="0">
                             <el-table ref="skusToSave" :data="formData.skus" style="width: 100%" size="small" stripe>
@@ -143,6 +143,39 @@
                                 </el-table-column>
                             </el-table>
                         </el-form-item>
+
+                        <template v-if="skusUnsaved.length > 0">
+                            <el-form-item label-width="0">
+                                <el-tag size="small" type="warning">未保存</el-tag><span style="margin-left: 5px; font-size: 12px; color: #5e6d82;">（如有需要，可勾选保存到数据库中）</span>
+                            </el-form-item>
+                            <el-form-item label-width="0">
+                                <el-table :data="skusUnsaved" ref="skusUnsaved" @selection-change="handleSelectUnsaved" style="width: 100%" size="small" stripe>
+                                    <el-table-column type="selection" width="55"></el-table-column>
+                                    <el-table-column label="属性组合">
+                                        <el-table-column v-for="(item, index) in formData.saleAttrs" :label="item.name" :key="item.id">
+                                            <template slot-scope="{ row }">
+                                                <span style="margin-left: 10px">{{ row.attrs[index].value }}</span>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table-column>
+                                    <el-table-column label="sku名称" min-width="255px">
+                                        <template slot-scope="scope">
+                                            <el-input v-model="scope.row.name"></el-input>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column label="价格">
+                                        <template slot-scope="scope">
+                                            <el-input v-model="scope.row.price"></el-input>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column label="库存">
+                                        <template slot-scope="scope">
+                                            <el-input v-model="scope.row.stock"></el-input>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                            </el-form-item>
+                        </template>
 
                         <template v-if="skusToRemove.length > 0">
                             <el-form-item label-width="0">
@@ -288,7 +321,7 @@ export default {
             },
             BASE, ATTR, SALE_ATTR, SKU, SETTINGS,
             categoryIds: [],
-            formRefNames: [BASE, ATTR, SALE_ATTR, SETTINGS],
+            formRefNames: [BASE, ATTR, SALE_ATTR, SKU, SETTINGS],
             steps,
             attrGroupList: [],
             saleAttrList: [],
@@ -296,7 +329,10 @@ export default {
             isEditing: false,
             skuValueMap: null,
             skusToRemove: [], // 用于保存已经存在数据库，并将要删除的sku
-            skusSaved: [] // 从接口获取的原始sku数据
+            skusSaved: [], // 从接口获取的原始sku数据
+            skusUnsaved: [], // 未保存至数据库的sku数据（此数据只有在编辑的时候，才会存在）
+            // ref不是响应式的，在mounted时，dom没有渲染，因此无法获取到（undefined），因此必须使用$nextTick(在下次 DOM 更新循环结束之后执行延迟回调)，在更新dom后方可获取；别把v-if和ref一起使用
+            skusUnsavedChecked: [],
         }
     },
     async created() {
@@ -326,9 +362,24 @@ export default {
         }
     },
     methods: {
+        // 恢复选中的未保存的sku数据【只有编辑时】
+        restore() {
+            if (this.skusUnsavedChecked.length) {
+                this.$nextTick(() => {
+                    for (const item of this.skusUnsavedChecked) {
+                        this.$refs.skusUnsaved.toggleRowSelection(item, true);
+                    }
+                });
+            }
+        },
         previous() {
             if (this.active > 1) {
                 this.active--;
+            }
+
+            // 返回至sku时，若之前已经选择了数据，则应该把数据还原；但是如果返回销售属性时，则不记录，此时会重新生成，要重新选择
+            if (this.currentFormRefName === SKU) {
+                this.restore();
             }
         },
         // 检查必填表单
@@ -346,7 +397,6 @@ export default {
         async next() {
             try {
                 this.check();
-                
                 switch (this.currentFormRefName) {
                     // 若当前是'base'，则表示下个是'attr'，此前必须先调用接口获取规格属性分组
                     case BASE:
@@ -413,7 +463,6 @@ export default {
                         }
                         return attrItem;
                     });
-                    console.log(_attrs);
                 }
                 else {
                     _attrs = []; // 每个分组的属性集合
@@ -490,11 +539,12 @@ export default {
             // 优先颜色属性【后端来做就可以】
             const cp = this.makeCartesianProduct(saleAttrValues);
             const skuList = [];
-            const newSkuValueList = [];
+            const skuValueList = []; // 保存sku的值
+            const skusUnsaved = [];
             for (const item of cp) {
 
                 const values = item.join(',');
-                newSkuValueList.push(values);
+                skuValueList.push(values);
                 let skuId = null;
 
                 if (this.isEditing && (skuId = this.skuValueMap[values])) {
@@ -518,20 +568,26 @@ export default {
                             value: item[i]
                         });
                     }
-                    skuList.push({
+                    const sku = {
                         attrs,
                         name: this.formData.name + " " + item.join(" "),
                         price: 0,
                         stock: 0
-                    });
+                    };
+                    if (this.isEditing) {
+                        skusUnsaved.push(sku);
+                    }
+                    else {
+                        skuList.push(sku);
+                    }
                 }
             }
             
             if (this.isEditing) {
-                const attrsToRemove = getDifference(Object.keys(this.skuValueMap), newSkuValueList);
-                if (attrsToRemove && attrsToRemove.length) {
+                const skuValuesToRemove = getDifference(Object.keys(this.skuValueMap), skuValueList);
+                if (skuValuesToRemove && skuValuesToRemove.length) {
                     // 查找对应id的sku
-                    const skuIds = attrsToRemove.map(item => this.skuValueMap[item]);
+                    const skuIds = skuValuesToRemove.map(item => this.skuValueMap[item]);
                     this.skusToRemove = this.skusSaved.filter(item => skuIds.includes(item.id));
                 }
                 else {
@@ -541,6 +597,7 @@ export default {
 
             // 注意skusToRemove与skus的赋值先后顺序
             this.formData.skus = skuList;
+            this.skusUnsaved = skusUnsaved;
         },
         /**
          * 生成销售属性笛卡尔积；如有以下销售属性：
@@ -618,10 +675,14 @@ export default {
                 // 若为编辑时，获取将要删除的skuId
                 if (this.isEditing) {
                     others.removing = this.skusToRemove.map(item => item.id);
-                    resp = await update(others)
+
+                    if (this.skusUnsavedChecked.length) {
+                        others.skus.push(...this.skusUnsavedChecked);
+                    }
+                    resp = await update(others);
                 }
                 else {
-                    resp = await save(others)
+                    resp = await save(others);
                 }
                 if (resp.code !== 0) {
                     return this.$message.error("保存失败：" + resp.message);
@@ -661,6 +722,10 @@ export default {
             }
 
             return [...new Set(this.skuSaleAttrList.filter(item => item.attrId === id).map(item => item.value))];
+        },
+        // 如果点击返回上一步，是必须重新选择的
+        handleSelectUnsaved(selection) {
+            this.skusUnsavedChecked = selection;
         }
     }
 }
