@@ -141,6 +141,15 @@
                                         <el-input v-model="scope.row.stock"></el-input>
                                     </template>
                                 </el-table-column>
+
+                                <el-table-column
+                                    fixed="right"
+                                    label="操作"
+                                    width="120">
+                                    <template slot-scope="scope">
+                                        <el-button type="text" size="small" @click="removeSku(scope)">移除</el-button>
+                                    </template>
+                                </el-table-column>
                             </el-table>
                         </el-form-item>
 
@@ -726,6 +735,19 @@ export default {
         // 如果点击返回上一步，是必须重新选择的
         handleSelectUnsaved(selection) {
             this.skusUnsavedChecked = selection;
+        },
+        // 分有两种情况：1）新增时，移除对象放进skusUnsaved；2）编辑时，放进skusToRemove
+        // 移除数据恢复功能暂时不考虑；也有可代替的操作：返回上一步，重新生成即可
+        removeSku(scope) {
+            const row = scope.row;
+            const index = scope.$index;
+            this.formData.skus.splice(index, 1);
+            if (row.id) {
+                this.skusToRemove.push({ ...row });
+            }
+            else {
+                this.skusUnsaved.push({ ...row });
+            }
         }
     }
 }
